@@ -35,6 +35,14 @@
             font-size: 24px;
         }
 
+        h2 {
+            color: #333;
+            margin: 30px 0 15px 0;
+            font-size: 20px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
         .mode-switch {
             display: flex;
             gap: 10px;
@@ -291,6 +299,42 @@
             background: #f8d7da;
             color: #721c24;
         }
+
+        .price-settings {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 8px;
+        }
+
+        .price-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            gap: 10px;
+        }
+
+        .price-row label {
+            flex: 0 0 120px;
+            margin-bottom: 0;
+        }
+
+        .price-row input {
+            flex: 1;
+        }
+
+        .current-prices {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .current-prices p {
+            margin: 5px 0;
+            color: #333;
+        }
     </style>
 </head>
 
@@ -335,6 +379,42 @@
 
         <!-- 幹事モード -->
         <div id="adminSection" class="section">
+            <!-- 金額設定セクション -->
+            <div class="price-settings">
+                <h2 style="margin-top: 0; border: none; padding: 0;">💰 金額設定</h2>
+                
+                <div class="current-prices">
+                    <p><strong>現在の設定:</strong></p>
+                    <p>打ち上げのみ参加する: <span id="currentPrice1">未設定</span></p>
+                    <p>二次会のみ参加する: <span id="currentPrice2">未設定</span></p>
+                    <p>打ち上げと二次会に参加する: <span id="currentPrice3">未設定</span></p>
+                </div>
+
+                <div class="price-row">
+                    <label>打ち上げのみ参加する</label>
+                    <input type="text" id="price1" placeholder="例: 3000円">
+                </div>
+
+                <div class="price-row">
+                    <label>二次会のみ参加する</label>
+                    <input type="text" id="price2" placeholder="例: 2000円">
+                </div>
+
+                <div class="price-row">
+                    <label>打ち上げと二次会に参加する</label>
+                    <input type="text" id="price3" placeholder="例: 5000円">
+                </div>
+
+                <button class="submit-btn" onclick="updatePrices()" style="margin-top: 10px;">
+                    💾 金額を保存
+                </button>
+                
+                <div id="priceStatus"></div>
+            </div>
+
+            <!-- 受け取り確認セクション -->
+            <h2>✅ 受け取り確認</h2>
+
             <div class="form-group">
                 <label for="adminGradeSelect">学年を選択</label>
                 <select id="adminGradeSelect" onchange="loadAdminNamesByGrade()">
@@ -362,10 +442,9 @@
 
             <div id="adminStatus"></div>
 
-            <div style="margin-top: 30px;">
-                <h2 style="margin-bottom: 15px; color: #333;">全参加者の状況</h2>
-                <div id="allParticipants" class="admin-list"></div>
-            </div>
+            <!-- 全参加者状況 -->
+            <h2>📊 全参加者の状況</h2>
+            <div id="allParticipants" class="admin-list"></div>
         </div>
 
         <div id="loading" class="loading" style="display:none;">
@@ -391,8 +470,8 @@
     <script>
         // 設定
         const CONFIG = {
-            SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbyhYV9DPdnA_xHE5P3n7Eh6srElcRyrgsskD4vgMEzYiLmWf6Gn482G7sBhtQwHbxMHkg/exec', // ここにGoogle Apps ScriptのウェブアプリURLを入力
-            ADMIN_PASSWORD: 'guitar123'          // 幹事パスワード
+            SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbyhYV9DPdnA_xHE5P3n7Eh6srElcRyrgsskD4vgMEzYiLmWf6Gn482G7sBhtQwHbxMHkg/exec',
+            ADMIN_PASSWORD: 'guitar123'
         };
 
         let spreadsheetData = [];
@@ -415,13 +494,29 @@
                 if (data.success) {
                     spreadsheetData = data.data;
 
+                    // デバッグ: 2行目のデータを確認
+                    console.log('全データ行数:', spreadsheetData.length);
+                    if (spreadsheetData.length > 1) {
+                        console.log('2行目の全データ:', spreadsheetData[1]);
+                        console.log('K2 (インデックス10):', spreadsheetData[1][14]);
+                        console.log('L2 (インデックス11):', spreadsheetData[1][15]);
+                        console.log('M2 (インデックス12):', spreadsheetData[1][16]);
+                    }
+
                     // 金額設定を読み込む (K2, L2, M2)
                     if (spreadsheetData.length > 1) {
+                        const row2 = spreadsheetData[1];
+                        
                         priceSettings = {
-                            '打ち上げのみ': spreadsheetData[1][10] || '未定', // K2
-                            '二次会のみ': spreadsheetData[1][11] || '未定',   // L2
-                            '両方参加': spreadsheetData[1][12] || '未定'       // M2
+                            '打ち上げのみ参加する': row2[14] ? String(row2[14]) : '未設定',
+                            '二次会のみ参加する': row2[15] ? String(row2[15]) : '未設定',
+                            '打ち上げと二次会に参加する': row2[16] ? String(row2[16]) : '未設定'
                         };
+                        
+                        console.log('読み込んだ金額設定:', priceSettings);
+                        
+                        // 現在の金額を表示
+                        updateCurrentPricesDisplay();
                     }
 
                     loadGrades();
@@ -437,14 +532,83 @@
             }
         }
 
+        // 現在の金額設定を表示
+        function updateCurrentPricesDisplay() {
+            document.getElementById('currentPrice1').textContent = priceSettings['打ち上げのみ参加する'];
+            document.getElementById('currentPrice2').textContent = priceSettings['二次会のみ参加する'];
+            document.getElementById('currentPrice3').textContent = priceSettings['打ち上げと二次会に参加する'];
+        }
+
+        // 金額を更新
+        async function updatePrices() {
+            const price1 = document.getElementById('price1').value.trim();
+            const price2 = document.getElementById('price2').value.trim();
+            const price3 = document.getElementById('price3').value.trim();
+
+            if (!price1 || !price2 || !price3) {
+                alert('すべての金額を入力してください');
+                return;
+            }
+
+            if (!confirm('金額を保存しますか？')) {
+                return;
+            }
+
+            const loading = document.getElementById('loading');
+            loading.style.display = 'block';
+
+            try {
+                // GETリクエストで試す（デバッグ用）
+                const url = CONFIG.SCRIPT_URL +
+                    '?action=updatePrices' +
+                    '&price1=' + encodeURIComponent(price1) +
+                    '&price2=' + encodeURIComponent(price2) +
+                    '&price3=' + encodeURIComponent(price3);
+
+                console.log('リクエストURL:', url);
+
+                // まずGETで試す
+                const response = await fetch(url, {
+                    method: 'GET'
+                });
+
+                const result = await response.json();
+                console.log('レスポンス:', result);
+
+                if (result.success) {
+                    document.getElementById('priceStatus').innerHTML =
+                        '<div class="status success">✅ 金額を保存しました</div>';
+
+                    // データ再読み込み
+                    await loadSpreadsheetData();
+
+                    // 入力フィールドをクリア
+                    document.getElementById('price1').value = '';
+                    document.getElementById('price2').value = '';
+                    document.getElementById('price3').value = '';
+
+                    setTimeout(() => {
+                        document.getElementById('priceStatus').innerHTML = '';
+                    }, 3000);
+                } else {
+                    alert('保存に失敗しました: ' + (result.error || '不明なエラー'));
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                alert('金額の保存に失敗しました。もう一度お試しください。\n詳細: ' + error.message);
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
         // 学年一覧を読み込む
         function loadGrades() {
             const gradeSelect = document.getElementById('gradeSelect');
             const grades = new Set();
 
-            // 2行目以降（データ行）から学年を取得
             for (let i = 1; i < spreadsheetData.length; i++) {
-                const grade = spreadsheetData[i][6]; // G列（インデックス6）
+                const grade = spreadsheetData[i][6];
                 if (grade) {
                     grades.add(grade);
                 }
@@ -473,7 +637,7 @@
 
             for (let i = 1; i < spreadsheetData.length; i++) {
                 if (spreadsheetData[i][6] === grade) {
-                    const name = spreadsheetData[i][1]; // B列（インデックス1）
+                    const name = spreadsheetData[i][1];
                     if (name) {
                         const option = document.createElement('option');
                         option.value = i;
@@ -495,20 +659,18 @@
             }
 
             const row = spreadsheetData[rowIndex];
-            const participationType = row[2] || ''; // C列
-            const paymentMethod = row[3] || '';     // D列
-            const given = row[7] || '';              // H列
-            const received = row[8] || '';           // I列
-            const completed = row[9] || '';          // J列
+            const participationType = row[2] || '';
+            const paymentMethod = row[3] || '';
+            const given = row[7] || '';
+            const received = row[8] || '';
+            const completed = row[9] || '';
 
             document.getElementById('participationType').textContent = participationType;
             document.getElementById('paymentMethod').textContent = paymentMethod;
 
-            // 金額を表示
-            let price = priceSettings[participationType] || '未定';
+            let price = priceSettings[participationType] || '未設定';
             document.getElementById('amount').textContent = price;
 
-            // 現在の状態を表示
             const statusDiv = document.getElementById('currentStatus');
             let statusHtml = '<div class="status-badges">';
 
@@ -551,7 +713,6 @@
             loading.style.display = 'block';
 
             try {
-                // H列（インデックス7）に「渡した」を書き込む
                 const url = CONFIG.SCRIPT_URL +
                     '?action=updateCell' +
                     '&row=' + (rowIndex + 1) +
@@ -563,17 +724,13 @@
                     mode: 'no-cors'
                 });
 
-                // no-corsモードでは詳細なレスポンスが取得できないため、
-                // 少し待ってからデータを再読み込みして確認
                 await new Promise(resolve => setTimeout(resolve, 1000));
 
                 document.getElementById('participantStatus').innerHTML =
                     '<div class="status success">✅ 「渡した」を記録しました</div>';
 
-                // データ再読み込み
                 await loadSpreadsheetData();
 
-                // 選択状態を維持
                 document.getElementById('gradeSelect').value = row[6];
                 loadNamesByGrade();
                 setTimeout(() => {
@@ -604,7 +761,6 @@
                 document.getElementById('adminSection').classList.remove('active');
                 buttons[0].classList.add('active');
             } else {
-                // 幹事モードはパスワード確認
                 document.getElementById('passwordModal').classList.add('active');
             }
         }
@@ -613,7 +769,6 @@
         function cancelPasswordModal() {
             document.getElementById('passwordModal').classList.remove('active');
             document.getElementById('passwordInput').value = '';
-            // 参加者モードに戻る
             const buttons = document.querySelectorAll('.mode-btn');
             buttons[0].classList.add('active');
             buttons[1].classList.remove('active');
@@ -700,7 +855,7 @@
             document.getElementById('adminParticipationType').textContent = participationType;
             document.getElementById('adminPaymentMethod').textContent = paymentMethod;
 
-            let price = priceSettings[participationType] || '未定';
+            let price = priceSettings[participationType] || '未設定';
             document.getElementById('adminAmount').textContent = price;
 
             const statusDiv = document.getElementById('adminCurrentStatus');
@@ -745,7 +900,6 @@
             loading.style.display = 'block';
 
             try {
-                // I列（インデックス8）に「もらった」を書き込む
                 const url = CONFIG.SCRIPT_URL +
                     '?action=updateCell' +
                     '&row=' + (rowIndex + 1) +
@@ -757,17 +911,13 @@
                     mode: 'no-cors'
                 });
 
-                // no-corsモードでは詳細なレスポンスが取得できないため、
-                // 少し待ってからデータを再読み込みして確認
                 await new Promise(resolve => setTimeout(resolve, 1000));
 
                 document.getElementById('adminStatus').innerHTML =
                     '<div class="status success">✅ 「もらった」を記録しました</div>';
 
-                // データ再読み込み
                 await loadSpreadsheetData();
 
-                // 選択状態を維持
                 document.getElementById('adminGradeSelect').value = row[6];
                 loadAdminNamesByGrade();
                 setTimeout(() => {
@@ -807,7 +957,7 @@
 
                 if (!name) continue;
 
-                let price = priceSettings[participationType] || '未定';
+                let price = priceSettings[participationType] || '未設定';
 
                 html += `
                     <div class="participant-item">
