@@ -511,9 +511,9 @@
             document.getElementById('participantInfo').style.display = 'block';
 
             // データを短縮形式に変換
+            // QRコードデータをコンソールで確認
             const qrData = String(rowIndex);
-
-            console.log('QRコードデータ:', qrData);
+            console.log('生成するQRデータ:', qrData);
 
             // QRコードを生成
             const canvas = document.getElementById('qrcode');
@@ -615,27 +615,27 @@
         async function onScanSuccess(decodedText, decodedResult) {
             try {
                 // 短縮形式のデータを解析: rowIndex|name|amount
-                const parts = decodedText.split('|');
+                // QRコードからrowIndexを取得
+                const rowIndex = parseInt(decodedText);
 
-                if (parts.length !== 3) {
+                if (isNaN(rowIndex)) {
                     throw new Error('無効なQRコード形式です');
                 }
-
-                const [rowIndex, name, amount] = parts;
 
                 console.log('スキャン成功:', { rowIndex, name, amount });
 
                 // 元のデータから学年と参加区分を取得
-                const participant = spreadsheetData.find(row =>
-                    String(row[1]).trim() === name.trim()
-                );
+                // rowIndexからデータを取得
+                const participant = spreadsheetData[rowIndex];
 
                 if (!participant) {
                     throw new Error('参加者情報が見つかりません');
                 }
 
-                const grade = participant[0] || '不明';
-                const participationType = participant[7] || '不明';
+                const name = participant[1] || '';
+                const grade = participant[0] || '';
+                const participationType = participant[7] || '';
+                const amount = priceSettings[participationType] || '';
 
                 // スキャンデータを保存
                 scannedData = {
