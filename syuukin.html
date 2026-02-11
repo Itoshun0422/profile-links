@@ -665,10 +665,15 @@
                     '&col=J' +
                     '&value=' + encodeURIComponent('回収完了');
 
-                await fetch(url, {
-                    method: 'POST',
-                    mode: 'no-cors'
+                const response = await fetch(url, {
+                    method: 'GET'
                 });
+
+                const result = await response.json();
+
+                if (!result.success) {
+                    throw new Error(result.error || '更新に失敗しました');
+                }
 
                 await new Promise(resolve => setTimeout(resolve, 500));
 
