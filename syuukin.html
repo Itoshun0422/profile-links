@@ -344,6 +344,11 @@
                 <p><strong>学年:</strong> <span id="scannedGrade"></span></p>
                 <p><strong>参加区分:</strong> <span id="scannedType"></span></p>
                 <p><strong>金額:</strong> <span class="amount" id="scannedAmount"></span></p>
+                <div style="display: flex; gap: 10px; margin-top: 15px;">
+                    <button class="btn" onclick="confirmPayment()" style="flex: 1; background: #28a745;">✅
+                        回収完了として記録</button>
+                    <button class="btn" onclick="cancelScan()" style="flex: 1; background: #dc3545;">❌ キャンセル</button>
+                </div>
             </div>
 
             <div id="adminStatus"></div>
@@ -372,7 +377,7 @@
     <script>
         // 設定
         const CONFIG = {
-            SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbyhYV9DPdnA_xHE5P3n7Eh6srElcRyrgsskD4vgMEzYiLmWf6Gn482G7sBhtQwHbxMHkg/exec', // ここにGoogle Apps ScriptのウェブアプリURLを入力
+            SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbz08lmQxzwgnulLkhz50BotpyYVNjSmsmeareaWuizRqxDJLmuBA_s_DU9mxjOFZQxZAw/exec', // ここにGoogle Apps ScriptのウェブアプリURLを入力
             ADMIN_PASSWORD: 'souta3'          // 幹事パスワード
         };
 
@@ -604,48 +609,58 @@
         }
 
         // QRコードスキャン成功時
+        // QRコードスキャン成功時
+        let scannedData = null; // スキャンしたデータを一時保存
+
         async function onScanSuccess(decodedText, decodedResult) {
             try {
+                // 短縮形式のデータを解析: rowIndex|name|amount
+                const parts = decodedText.split('|');
 
-                const rowIndex = parseInt(decodedText);
-
-                if (isNaN(rowIndex)) {
+                if (parts.length !== 3) {
                     throw new Error('無効なQRコード形式です');
                 }
 
-                const participant = spreadsheetData[rowIndex];
+                const [rowIndex, name, amount] = parts;
+
+                console.log('スキャン成功:', { rowIndex, name, amount });
+
+                // 元のデータから学年と参加区分を取得
+                const participant = spreadsheetData.find(row =>
+                    String(row[1]).trim() === name.trim()
+                );
 
                 if (!participant) {
                     throw new Error('参加者情報が見つかりません');
                 }
 
-                const name = participant[1] || '';
-                const participationType = participant[2] || '';
-                const grade = participant[6] || '';
-                const amount = priceSettings[participationType] || '';
+                const grade = participant[0] || '不明';
+                const participationType = participant[7] || '不明';
 
-                console.log('スキャン成功:', { rowIndex, name, amount });
+                // スキャンデータを保存
+                scannedData = {
+                    rowIndex: parseInt(rowIndex),
+                    name: name,
+                    grade: grade,
+                    participationType: participationType,
+                    amount: amount
+                };
 
+                // スキャン結果を表示
                 document.getElementById('scannedName').textContent = name;
                 document.getElementById('scannedGrade').textContent = grade;
                 document.getElementById('scannedType').textContent = participationType;
                 document.getElementById('scannedAmount').textContent = amount;
                 document.getElementById('scanResult').style.display = 'block';
 
+                // スキャナーを一時停止
                 qrScanner.pause();
 
-                await markAsCompleted(rowIndex, name);
-
-                setTimeout(() => {
-                    document.getElementById('scanResult').style.display = 'none';
-                    qrScanner.resume();
-                }, 3000);
-
             } catch (error) {
-                console.error('QRコードの解析エラー:', error);
+                console.error('スキャンエラー:', error);
+                alert('QRコードの読み取りに失敗しました: ' + error.message);
             }
         }
-
 
         // QRコードスキャン失敗時（エラーメッセージは表示しない）
         function onScanFailure(error) {
@@ -653,11 +668,14 @@
         }
 
         // 回収完了を記録
+        // 回収完了を記録
         async function markAsCompleted(rowIndex, name) {
             const loading = document.getElementById('loading');
             loading.style.display = 'block';
 
             try {
+                console.log('記録リクエスト送信:', { rowIndex, name });
+
                 // J列に「回収完了」を書き込む
                 const url = CONFIG.SCRIPT_URL +
                     '?action=updateCell' +
@@ -665,17 +683,20 @@
                     '&col=J' +
                     '&value=' + encodeURIComponent('回収完了');
 
+                console.log('リクエストURL:', url);
+
                 const response = await fetch(url, {
                     method: 'GET'
                 });
 
+                console.log('レスポンスステータス:', response.status);
+
                 const result = await response.json();
+                console.log('レスポンス結果:', result);
 
                 if (!result.success) {
                     throw new Error(result.error || '更新に失敗しました');
                 }
-
-                await new Promise(resolve => setTimeout(resolve, 500));
 
                 document.getElementById('adminStatus').innerHTML =
                     `<div class="status success">✅ ${name}さんの回収を完了しました</div>`;
@@ -690,11 +711,43 @@
             } catch (error) {
                 console.error('Error:', error);
                 document.getElementById('adminStatus').innerHTML =
-                    '<div class="status error">❌ 更新に失敗しました</div>';
+                    `<div class="status error">❌ 更新に失敗しました: ${error.message}</div>`;
             } finally {
                 loading.style.display = 'none';
             }
         }
+
+        // 回収完了を確認して記録
+        async function confirmPayment() {
+            if (!scannedData) {
+                alert('スキャンデータがありません');
+                return;
+            }
+
+            console.log('記録開始:', scannedData);
+
+            await markAsCompleted(scannedData.rowIndex, scannedData.name);
+
+            // スキャン結果を非表示にしてスキャナー再開
+            document.getElementById('scanResult').style.display = 'none';
+            scannedData = null;
+
+            if (qrScanner) {
+                qrScanner.resume();
+            }
+        }
+
+        // スキャンをキャンセル
+        function cancelScan() {
+            document.getElementById('scanResult').style.display = 'none';
+            scannedData = null;
+
+            if (qrScanner) {
+                qrScanner.resume();
+            }
+        }
+
+
 
         // Enterキーでパスワード確認
         document.getElementById('passwordInput').addEventListener('keypress', function (e) {
