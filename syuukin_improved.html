@@ -483,9 +483,9 @@
                 // 金額設定を取得（2行目のO, P, Q列）
                 if (spreadsheetData.length >= 2) {
                     priceSettings = {
-                        '打ち上げのみ': spreadsheetData[2][14] || '未設定', // O列
-                        '二次会のみ': spreadsheetData[2][15] || '未設定',   // P列
-                        '両方参加': spreadsheetData[2][16] || '未設定'        // Q列
+                        '打ち上げのみ参加する': spreadsheetData[1][14] || '未設定', // O列
+                        '打ち上げ・二次会には参加しない': spreadsheetData[1][15] || '未設定',   // P列
+                        '打ち上げと二次会に参加する': spreadsheetData[1][16] || '未設定'        // Q列
                     };
                 }
 
