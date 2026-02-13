@@ -373,6 +373,10 @@
         <!-- 参加者モード -->
         <div id="participantSection" class="section active">
             <div class="form-group">
+                <label for="gradeSelect">学年を選択してください</label>
+                <select id="gradeSelect" onchange="filterByGrade()">
+                    <option value="">学年を選択</option>
+                </select>
                 <label for="participantSelect">あなたの名前を選択してください</label>
                 <select id="participantSelect" onchange="selectParticipant()">
                     <option value="">選択してください</option>
@@ -479,9 +483,9 @@
                 // 金額設定を取得（2行目のO, P, Q列）
                 if (spreadsheetData.length >= 2) {
                     priceSettings = {
-                        '打ち上げのみ': spreadsheetData[1][14] || '未設定', // O列
-                        '二次会のみ': spreadsheetData[1][15] || '未設定',   // P列
-                        '両方参加': spreadsheetData[1][16] || '未設定'        // Q列
+                        '打ち上げのみ': spreadsheetData[2][14] || '未設定', // O列
+                        '二次会のみ': spreadsheetData[2][15] || '未設定',   // P列
+                        '両方参加': spreadsheetData[2][16] || '未設定'        // Q列
                     };
                 }
 
@@ -489,6 +493,7 @@
 
                 // 参加者リストを作成
                 populateParticipantList();
+                populateGradeList();
 
                 console.log('データ読み込み完了');
 
@@ -524,6 +529,51 @@
             }
 
             console.log('参加者リスト作成完了:', select.options.length - 1 + '人');
+        }
+
+        function populateGradeList() {
+
+            const gradeSelect = document.getElementById("gradeSelect");
+            gradeSelect.innerHTML = '<option value="">学年を選択</option>';
+
+            const grades = new Set();
+
+            for (let i = 1; i < spreadsheetData.length; i++) {
+                const grade = spreadsheetData[i][6]; // G列
+                if (grade) grades.add(grade);
+            }
+
+            grades.forEach(grade => {
+                const option = document.createElement("option");
+                option.value = grade;
+                option.textContent = grade;
+                gradeSelect.appendChild(option);
+            });
+        }
+
+        function filterByGrade() {
+
+            const selectedGrade = document.getElementById("gradeSelect").value;
+            const nameSelect = document.getElementById("participantSelect");
+
+            nameSelect.innerHTML = '<option value="">氏名を選択</option>';
+            filteredParticipants = [];
+
+            for (let i = 1; i < spreadsheetData.length; i++) {
+
+                const grade = spreadsheetData[i][6];   // G列
+                const name = spreadsheetData[i][1];    // 氏名列
+
+                if (selectedGrade && grade === selectedGrade) {
+
+                    const option = document.createElement("option");
+                    option.value = i;
+                    option.textContent = name;
+                    nameSelect.appendChild(option);
+
+                    filteredParticipants.push(i);
+                }
+            }
         }
 
         // ===== 参加者選択 =====
@@ -776,7 +826,7 @@
                 console.log('記録リクエスト送信:', { rowIndex, name });
 
                 // J列に「回収完了」を書き込む
-                const url = `${CONFIG.SCRIPT_URL}?action=updateCell&row=${rowIndex+1}&col=J&value=${encodeURIComponent('回収完了')}&t=${Date.now()}`;
+                const url = `${CONFIG.SCRIPT_URL}?action=updateCell&row=${rowIndex + 1}&col=J&value=${encodeURIComponent('回収完了')}&t=${Date.now()}`;
 
                 const response = await fetch(url);
 
