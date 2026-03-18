@@ -92,6 +92,7 @@
             border-radius: 8px;
             font-size: 16px;
             transition: border-color 0.3s;
+            margin-bottom: 15px;
         }
 
         select:focus {
@@ -114,12 +115,6 @@
 
         .info-box strong {
             color: #333;
-        }
-
-        .amount {
-            font-size: 24px;
-            color: #667eea;
-            font-weight: bold;
         }
 
         .qr-container {
@@ -181,12 +176,6 @@
             background: #f8d7da;
             color: #721c24;
             border: 1px solid #f5c6cb;
-        }
-
-        .status.completed {
-            background: #cce5ff;
-            color: #004085;
-            border: 1px solid #b8daff;
         }
 
         .status-badges {
@@ -348,6 +337,16 @@
         .hidden {
             display: none !important;
         }
+
+        .debug-box {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 8px;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 12px;
+            color: #856404;
+        }
     </style>
 </head>
 
@@ -385,8 +384,7 @@
 
             <div id="participantInfo" class="hidden">
                 <div class="info-box">
-                    <p><strong>参加区分:</strong> <span id="participationType"></span></p>
-                    <p><strong>金額:</strong> <span id="amount" class="amount"></span></p>
+                    <p><strong>名前:</strong> <span id="participantName"></span></p>
                 </div>
 
                 <div id="currentStatus"></div>
@@ -409,8 +407,6 @@
                 <h3>スキャン結果</h3>
                 <p class="scan-info"><strong>名前:</strong> <span id="scannedName"></span></p>
                 <p class="scan-info"><strong>学年:</strong> <span id="scannedGrade"></span></p>
-                <p class="scan-info"><strong>参加区分:</strong> <span id="scannedType"></span></p>
-                <p class="scan-info"><strong>金額:</strong> <span id="scannedAmount" class="amount"></span></p>
 
                 <div class="action-buttons">
                     <button class="action-btn primary" onclick="confirmPayment()">✅ 回収完了</button>
@@ -437,16 +433,20 @@
     <script>
         // ===== 設定 =====
         const CONFIG = {
-            // ここにコピーしたウェブアプリURLを貼り付け
-            SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbwxyCmPoEAg700r2B-eNFFfTj5Yc9jYZAoTudHkiM287MZZCgJcGuiJ_yLH0N3igTcqcg/exec',
-
-            // 幹事モードのパスワード（変更推奨）
+            SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbzFCpjMY0cKvK46-bIWMD04KWcKbDKHnKoTutDUs7h3xNkiOvRG-uE9Yv7UVW5_znLI/exec',
             ADMIN_PASSWORD: 'admin123'
+        };
+
+        // ===== 列インデックス定義（0始まり）=====
+        // A=0, B=1, C=2, D=3, E=4, F=5, G=6, H=7, I=8, J=9
+        const COL = {
+            NAME: 3,        // D列: 名前
+            GRADE: 6,       // G列: 学年
+            STATUS: 9       // J列: 回収状況
         };
 
         // ===== グローバル変数 =====
         let spreadsheetData = [];
-        let priceSettings = {};
         let qrScanner = null;
         let scannedData = null;
 
@@ -463,8 +463,6 @@
 
             try {
                 const url = `${CONFIG.SCRIPT_URL}?action=getData&t=${Date.now()}`;
-                console.log('データ取得URL:', url);
-
                 const response = await fetch(url);
 
                 if (!response.ok) {
@@ -472,7 +470,6 @@
                 }
 
                 const result = await response.json();
-                console.log('取得結果:', result);
 
                 if (!result.success) {
                     throw new Error(result.error || 'データの取得に失敗しました');
@@ -480,100 +477,77 @@
 
                 spreadsheetData = result.data;
 
-                // 金額設定を取得（2行目のO, P, Q列）
-                if (spreadsheetData.length >= 2) {
-                    priceSettings = {
-                        '打ち上げのみ参加する': spreadsheetData[1][14] || '未設定', // O列
-                        '打ち上げ・二次会には参加しない': spreadsheetData[1][15] || '未設定',   // P列
-                        '打ち上げと二次会に参加する': spreadsheetData[1][16] || '未設定'        // Q列
-                    };
+                // デバッグ：1行目（ヘッダー）と2行目を確認
+                if (spreadsheetData.length > 0) {
+                    console.log('ヘッダー行:', spreadsheetData[0]);
+                }
+                if (spreadsheetData.length > 1) {
+                    console.log('データ1行目:', spreadsheetData[1]);
+                    console.log('D列(インデックス3):', spreadsheetData[1][COL.NAME]);
+                    console.log('G列(インデックス6):', spreadsheetData[1][COL.GRADE]);
                 }
 
-                console.log('金額設定:', priceSettings);
-
-                // 参加者リストを作成
-                populateParticipantList();
                 populateGradeList();
-
-                console.log('データ読み込み完了');
 
             } catch (error) {
                 console.error('データ読み込みエラー:', error);
-                alert('データの読み込みに失敗しました: ' + error.message + '\n\nCONFIG.SCRIPT_URLが正しく設定されているか確認してください。');
+                alert('データの読み込みに失敗しました: ' + error.message);
             } finally {
                 loading.classList.add('hidden');
             }
         }
 
-        // ===== 参加者リスト作成 =====
-        function populateParticipantList() {
-            const select = document.getElementById('participantSelect');
-            select.innerHTML = '<option value="">選択してください</option>';
-
-            // 2行目以降がデータ（1行目はヘッダー）
-            for (let i = 1; i < spreadsheetData.length; i++) {
-                const row = spreadsheetData[i];
-                const grade = row[0] || '';
-                const name = row[1] || '';
-                const participationType = row[2] || '';
-
-                if (name && participationType) {
-                    const option = document.createElement('option');
-                    option.value = i;
-                    option.textContent = `${name}（${grade}・${participationType}）`;
-                    select.appendChild(option);
-                }
-
-                console.log(i, row);
-
-            }
-
-            console.log('参加者リスト作成完了:', select.options.length - 1 + '人');
-        }
-
+        // ===== 学年リスト作成 =====
         function populateGradeList() {
-
-            const gradeSelect = document.getElementById("gradeSelect");
+            const gradeSelect = document.getElementById('gradeSelect');
             gradeSelect.innerHTML = '<option value="">学年を選択</option>';
 
             const grades = new Set();
 
             for (let i = 1; i < spreadsheetData.length; i++) {
-                const grade = spreadsheetData[i][6]; // G列
-                if (grade) grades.add(grade);
+                const grade = spreadsheetData[i][COL.GRADE];
+                if (grade !== undefined && grade !== null && grade !== '') {
+                    grades.add(String(grade));
+                }
             }
 
+            console.log('取得した学年一覧:', [...grades]);
+
             grades.forEach(grade => {
-                const option = document.createElement("option");
+                const option = document.createElement('option');
                 option.value = grade;
                 option.textContent = grade;
                 gradeSelect.appendChild(option);
             });
         }
 
+        // ===== 学年で絞り込み =====
         function filterByGrade() {
+            const selectedGrade = document.getElementById('gradeSelect').value;
+            const nameSelect = document.getElementById('participantSelect');
 
-            const selectedGrade = document.getElementById("gradeSelect").value;
-            const nameSelect = document.getElementById("participantSelect");
+            nameSelect.innerHTML = '<option value="">選択してください</option>';
+            document.getElementById('participantInfo').classList.add('hidden');
 
-            nameSelect.innerHTML = '<option value="">氏名を選択</option>';
-            filteredParticipants = [];
+            if (!selectedGrade) return;
 
+            let count = 0;
             for (let i = 1; i < spreadsheetData.length; i++) {
+                const grade = String(spreadsheetData[i][COL.GRADE] || '');
+                const name = spreadsheetData[i][COL.NAME] || '';
 
-                const grade = spreadsheetData[i][6];   // G列
-                const name = spreadsheetData[i][1];    // 氏名列
+                console.log(`行${i}: grade="${grade}", name="${name}", 一致=${grade === selectedGrade}`);
 
-                if (selectedGrade && grade === selectedGrade) {
-
-                    const option = document.createElement("option");
+                if (grade === selectedGrade && name !== '') {
+                    const option = document.createElement('option');
                     option.value = i;
                     option.textContent = name;
                     nameSelect.appendChild(option);
-
-                    filteredParticipants.push(i);
+                    count++;
                 }
             }
+
+            console.log(`学年"${selectedGrade}"の参加者: ${count}人`);
         }
 
         // ===== 参加者選択 =====
@@ -581,41 +555,28 @@
             const select = document.getElementById('participantSelect');
             const rowIndex = parseInt(select.value);
 
-            if (!rowIndex) {
+            if (isNaN(rowIndex) || !rowIndex) {
                 document.getElementById('participantInfo').classList.add('hidden');
                 return;
             }
 
             const row = spreadsheetData[rowIndex];
-            const name = row[1] || '';
-            const grade = row[6] || '不明';
-            const participationType = row[2] || '不明';
-            const completed = row[9] || '';
+            const name = row[COL.NAME] || '';
+            const completed = row[COL.STATUS] || '';
 
-            // 参加区分と金額を表示
-            document.getElementById('participationType').textContent = participationType;
-            let price = priceSettings[participationType] || '未設定';
-            document.getElementById('amount').textContent = price;
-
-            console.log('選択された参加者:', { name, grade, participationType, price, completed });
+            document.getElementById('participantName').textContent = name;
 
             // 状態表示
             const statusDiv = document.getElementById('currentStatus');
-            let statusHtml = '<div class="status-badges">';
-
             if (completed === '回収完了') {
-                statusHtml += '<span class="badge completed">✅ 回収完了</span>';
+                statusDiv.innerHTML = '<div class="status-badges"><span class="badge completed">✅ 回収完了</span></div>';
             } else {
-                statusHtml += '<span class="badge pending">⏳ 未完了</span>';
+                statusDiv.innerHTML = '<div class="status-badges"><span class="badge pending">⏳ 未回収</span></div>';
             }
-
-            statusHtml += '</div>';
-            statusDiv.innerHTML = statusHtml;
 
             // QRコード生成
             generateQRCode(rowIndex);
 
-            // 表示
             document.getElementById('participantInfo').classList.remove('hidden');
         }
 
@@ -625,12 +586,8 @@
                 const qrContainer = document.getElementById('qrcode');
                 qrContainer.innerHTML = '';
 
-                // QRコードデータ（行番号のみ）
-                const qrData = String(rowIndex);
-                console.log('QRコード生成:', qrData);
-
                 new QRCode(qrContainer, {
-                    text: qrData,
+                    text: String(rowIndex),
                     width: 250,
                     height: 250,
                     correctLevel: QRCode.CorrectLevel.M
@@ -653,12 +610,8 @@
                 document.getElementById('participantSection').classList.add('active');
                 document.getElementById('adminSection').classList.remove('active');
                 buttons[0].classList.add('active');
-
-                // QRスキャナーを停止
                 stopQRScanner();
-
             } else {
-                // 幹事モードはパスワード確認
                 document.getElementById('passwordModal').classList.add('active');
             }
         }
@@ -667,8 +620,7 @@
         function cancelPasswordModal() {
             document.getElementById('passwordModal').classList.remove('active');
             document.getElementById('passwordInput').value = '';
-            const buttons = document.querySelectorAll('.mode-btn');
-            buttons[0].classList.add('active');
+            document.querySelectorAll('.mode-btn')[0].classList.add('active');
         }
 
         function confirmPassword() {
@@ -680,101 +632,60 @@
                 document.getElementById('participantSection').classList.remove('active');
                 document.getElementById('adminSection').classList.add('active');
                 document.querySelectorAll('.mode-btn')[1].classList.add('active');
-
-                // QRスキャナーを開始
                 startQRScanner();
-
             } else {
                 alert('パスワードが正しくありません');
             }
         }
 
-        // Enterキーでパスワード確認
-        document.getElementById('passwordInput').addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') {
-                confirmPassword();
-            }
+        document.getElementById('passwordInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') confirmPassword();
         });
 
-        // ===== QRスキャナー開始 =====
+        // ===== QRスキャナー =====
         function startQRScanner() {
-            if (qrScanner) {
-                console.log('QRスキャナーは既に起動しています');
-                return;
-            }
+            if (qrScanner) return;
 
             qrScanner = new Html5Qrcode("qr-reader");
-
             qrScanner.start(
                 { facingMode: "environment" },
-                {
-                    fps: 10,
-                    qrbox: { width: 250, height: 250 }
-                },
+                { fps: 10, qrbox: { width: 250, height: 250 } },
                 onScanSuccess,
                 onScanFailure
             ).catch(err => {
                 console.error('QRスキャナーの起動に失敗:', err);
                 alert('カメラへのアクセスが拒否されました。ブラウザの設定でカメラの使用を許可してください。');
             });
-
-            console.log('QRスキャナー起動');
         }
 
-        // ===== QRスキャナー停止 =====
         function stopQRScanner() {
             if (qrScanner) {
                 qrScanner.stop().then(() => {
                     qrScanner = null;
-                    console.log('QRスキャナー停止');
-                }).catch(err => {
-                    console.error('スキャナー停止エラー:', err);
-                });
+                }).catch(err => console.error('スキャナー停止エラー:', err));
             }
         }
 
         // ===== QRコードスキャン成功 =====
-        function onScanSuccess(decodedText, decodedResult) {
+        function onScanSuccess(decodedText) {
             try {
                 const rowIndex = parseInt(decodedText);
 
-                if (isNaN(rowIndex) || rowIndex < 0 || rowIndex >= spreadsheetData.length) {
+                if (isNaN(rowIndex) || rowIndex < 1 || rowIndex >= spreadsheetData.length) {
                     throw new Error('無効なQRコードです');
                 }
 
-                console.log('スキャン成功:', rowIndex);
-
                 const participant = spreadsheetData[rowIndex];
+                const name = participant[COL.NAME] || '';
+                const grade = participant[COL.GRADE] || '不明';
 
-                if (!participant) {
-                    throw new Error('参加者情報が見つかりません');
-                }
+                scannedData = { rowIndex, name, grade };
 
-                const name = participant[1] || '';
-                const grade = participant[6] || '不明';
-                const participationType = participant[2] || '不明';
-                const amount = priceSettings[participationType] || '未設定';
-
-                // スキャンデータを保存
-                scannedData = {
-                    rowIndex: rowIndex,
-                    name: name,
-                    grade: grade,
-                    participationType: participationType,
-                    amount: amount
-                };
-
-                // スキャン結果を表示
                 document.getElementById('scannedName').textContent = name;
                 document.getElementById('scannedGrade').textContent = grade;
-                document.getElementById('scannedType').textContent = participationType;
-                document.getElementById('scannedAmount').textContent = amount;
                 document.getElementById('scanResult').classList.remove('hidden');
 
-                // スキャナーを一時停止
-                if (qrScanner) {
-                    qrScanner.pause();
-                }
+                if (qrScanner) qrScanner.pause();
 
             } catch (error) {
                 console.error('スキャンエラー:', error);
@@ -782,69 +693,39 @@
             }
         }
 
-        // ===== QRコードスキャン失敗 =====
-        function onScanFailure(error) {
-            // スキャン失敗は正常な動作なので何もしない
-        }
+        function onScanFailure(error) { /* 正常な動作 */ }
 
-        // ===== 回収完了を確認 =====
+        // ===== 回収完了 =====
         async function confirmPayment() {
-            if (!scannedData) {
-                alert('スキャンデータがありません');
-                return;
-            }
-
-            console.log('回収完了記録:', scannedData);
-
+            if (!scannedData) return;
             await markAsCompleted(scannedData.rowIndex, scannedData.name);
-
-            // スキャン結果を非表示にしてスキャナー再開
             document.getElementById('scanResult').classList.add('hidden');
             scannedData = null;
-
-            if (qrScanner) {
-                qrScanner.resume();
-            }
+            if (qrScanner) qrScanner.resume();
         }
 
-        // ===== スキャンをキャンセル =====
         function cancelScan() {
             document.getElementById('scanResult').classList.add('hidden');
             scannedData = null;
-
-            if (qrScanner) {
-                qrScanner.resume();
-            }
+            if (qrScanner) qrScanner.resume();
         }
 
-        // ===== 回収完了を記録 =====
         async function markAsCompleted(rowIndex, name) {
             const loading = document.getElementById('loading');
             loading.classList.remove('hidden');
 
             try {
-                console.log('記録リクエスト送信:', { rowIndex, name });
-
-                // J列に「回収完了」を書き込む
                 const url = `${CONFIG.SCRIPT_URL}?action=updateCell&row=${rowIndex + 1}&col=J&value=${encodeURIComponent('回収完了')}&t=${Date.now()}`;
-
                 const response = await fetch(url);
 
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
                 const result = await response.json();
-                console.log('レスポンス結果:', result);
-
-                if (!result.success) {
-                    throw new Error(result.error || '更新に失敗しました');
-                }
+                if (!result.success) throw new Error(result.error || '更新に失敗しました');
 
                 document.getElementById('adminStatus').innerHTML =
                     `<div class="status success">✅ ${name}さんの回収を完了しました</div>`;
 
-                // データ再読み込み
                 await loadSpreadsheetData();
 
                 setTimeout(() => {
@@ -860,7 +741,6 @@
             }
         }
 
-        // ===== ページ読み込み時に初期化 =====
         window.onload = init;
     </script>
 </body>
