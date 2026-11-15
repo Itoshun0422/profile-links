@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Nano33 IMU Monitor</title>
+
+    <style>
+        body {
+            background: #111827;
+            color: white;
+            font-family: sans-serif;
+            text-align: center;
+            padding: 25px;
+        }
+
+        button {
+            padding: 14px 30px;
+            border: none;
+            border-radius: 10px;
+            background: #2563eb;
+            color: white;
+            font-size: 16px;
+        }
+
+        .data {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 35px;
+        }
+
+        .item {
+            background: #263449;
+            border-radius: 12px;
+            padding: 20px 12px;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .value {
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        #status {
+            color: #fbbf24;
+            margin: 20px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h2>Nano33 IMU Monitor</h2>
+
+    <button onclick="connectBLE()">Connect Arduino</button>
+
+    <div id="status">Disconnected</div>
+
+    <div class="data">
+        <div class="item">
+            <p>ACC X</p>
+            <div class="value" id="ax">---</div>
+        </div>
+
+        <div class="item">
+            <p>ACC Y</p>
+            <div class="value" id="ay">---</div>
+        </div>
+
+        <div class="item">
+            <p>ACC Z</p>
+            <div class="value" id="az">---</div>
+        </div>
+    </div>
+
+    <script>
+
+        const SERVICE_UUID =
+            "19b10000-e8f2-537e-4f6c-d104768a1214";
+
+        const CHARACTERISTIC_UUID =
+            "19b10001-e8f2-537e-4f6c-d104768a1214";
+
+        let device;
+        let characteristic;
+
+        async function connectBLE() {
+
+            try {
+
+                document.getElementById("status").textContent =
+                    "Searching...";
+
+                device = await navigator.bluetooth.requestDevice({
+                    filters: [
+                        { services: [SERVICE_UUID] }
+                    ]
+                });
+
+                device.addEventListener(
+                    "gattserverdisconnected",
+                    () => {
+                        document.getElementById("status").textContent =
+                            "Disconnected";
+                    }
+                );
+
+                const server = await device.gatt.connect();
+
+                const service =
+                    await server.getPrimaryService(SERVICE_UUID);
+
+                characteristic =
+                    await service.getCharacteristic(CHARACTERISTIC_UUID);
+
+                await characteristic.startNotifications();
+
+                characteristic.addEventListener(
+                    "characteristicvaluechanged",
+                    receiveData
+                );
+
+                document.getElementById("status").textContent =
+                    "Connected: " + device.name;
+
+            } catch (error) {
+
+                document.getElementById("status").textContent =
+                    "Error: " + error.message;
+
+                console.error(error);
+            }
+        }
+
+        function receiveData(event) {
+
+            const value = event.target.value;
+
+            const decoder = new TextDecoder("utf-8");
+
+            const data = decoder.decode(value);
+
+            const values = data.split(",");
+
+            if (values.length !== 3) return;
+
+            document.getElementById("ax").textContent = values[0];
+            document.getElementById("ay").textContent = values[1];
+            document.getElementById("az").textContent = values[2];
+        }
+
+    </script>
+
+</body>
+
+</html>
