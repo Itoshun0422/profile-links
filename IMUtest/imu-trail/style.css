@@ -1,0 +1,21 @@
+#connectBtn{
+
+    position:absolute;
+
+    top:60px;
+
+    left:20px;
+
+    z-index:100;
+
+    background:#101820;
+
+    color:#69A0FF;
+
+    border:1px solid #69A0FF;
+
+    border-radius:8px;
+
+    padding:8px 16px;
+
+}
