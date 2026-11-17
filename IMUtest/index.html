@@ -2,421 +2,99 @@
 <html lang="ja">
 
 <head>
+
     <meta charset="UTF-8">
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nano 33 BLE - IMU Lab</title>
+
+    <title>
+        Campus Navigator
+    </title>
 
     <style>
-        * {
-            box-sizing: border-box;
-        }
-
         body {
+
             margin: 0;
-            padding: 20px;
-            background: #101522;
-            color: #eaf0ff;
-            font-family: Arial, sans-serif;
-        }
-
-        h1 {
-            font-size: 24px;
-            margin-bottom: 6px;
-        }
-
-        h2 {
-            font-size: 17px;
-            margin-top: 0;
-        }
-
-        .sub {
-            color: #9ba9c5;
-            font-size: 13px;
-            margin-bottom: 20px;
-        }
-
-        .panel {
-            background: #1b2537;
-            border: 1px solid #34415a;
-            border-radius: 14px;
-            padding: 16px;
-            margin-bottom: 16px;
-        }
-
-        button {
-            width: 100%;
-            padding: 14px;
-            border: 0;
-            border-radius: 10px;
-            background: #3978f6;
-            color: white;
-            font-size: 16px;
-            font-weight: bold;
-        }
-
-        #status {
-            color: #ffcb70;
-            margin-top: 12px;
-            font-size: 13px;
-        }
-
-        .values {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
-        }
-
-        .value {
-            background: #111a2a;
-            border-radius: 10px;
-            padding: 12px 5px;
-            text-align: center;
-        }
-
-        .number {
-            font-size: 22px;
-            font-weight: bold;
-            margin: 7px 0;
-        }
-
-        .axis-x {
-            color: #58a6ff;
-        }
-
-        .axis-y {
-            color: #48d597;
-        }
-
-        .axis-z {
-            color: #ffad60;
-        }
-
-        .small {
-            color: #9ba9c5;
-            font-size: 12px;
-        }
-
-        .cube-area {
-            height: 230px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            perspective: 600px;
             overflow: hidden;
-        }
+            background: #101820;
+            font-family: sans-serif;
 
-        .cube {
-            position: relative;
-            width: 110px;
-            height: 110px;
-            transform-style: preserve-3d;
-            transition: transform 0.08s linear;
-        }
-
-        .face {
-            position: absolute;
-            width: 110px;
-            height: 110px;
-            border: 2px solid white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 14px;
-            font-weight: bold;
-            opacity: 0.9;
-            backface-visibility: hidden;
-        }
-
-        .front {
-            background: #3978f6;
-            transform: translateZ(55px);
-        }
-
-        .back {
-            background: #244da1;
-            transform: rotateY(180deg) translateZ(55px);
-        }
-
-        .right {
-            background: #249c78;
-            transform: rotateY(90deg) translateZ(55px);
-        }
-
-        .left {
-            background: #17664e;
-            transform: rotateY(-90deg) translateZ(55px);
-        }
-
-        .top {
-            background: #d28b32;
-            transform: rotateX(90deg) translateZ(55px);
-        }
-
-        .bottom {
-            background: #a65d1f;
-            transform: rotateX(-90deg) translateZ(55px);
         }
 
         canvas {
-            width: 100%;
-            height: 190px;
+
             display: block;
+
         }
 
-        .magnitude {
-            font-size: 28px;
-            font-weight: bold;
-            text-align: center;
-            margin: 10px 0;
+        #ui {
+
+            position: absolute;
+
+            top: 20px;
+            left: 20px;
+
+            display: flex;
+            flex-direction: column;
+
+            gap: 8px;
+
+            z-index: 100;
+
+        }
+
+        .floor-button {
+
+            background: #101820;
+
+            border: 1px solid #69A0FF;
+
+            color: #69A0FF;
+
+            border-radius: 8px;
+
+            padding: 8px 12px;
+
+            cursor: pointer;
+
+            transition: .2s;
+
+        }
+
+        .floor-button:hover {
+
+            background: #69A0FF;
+            color: white;
+
+        }
+
+        .floor-button.active {
+
+            background: #69A0FF;
+            color: white;
+
+            box-shadow:
+                0 0 12px #69A0FF;
+
         }
     </style>
+
+    <script type="importmap">
+{
+    "imports":{
+        "three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"
+    }
+}
+</script>
+
 </head>
 
 <body>
 
-    <h1>IMU SENSOR LAB</h1>
-    <div class="sub">Arduino Nano 33 BLE Sense Rev2 / Bluetooth LE</div>
-
-    <div class="panel">
-        <button id="connectButton">Arduinoに接続</button>
-        <div id="status">未接続</div>
+    <div id="ui">
     </div>
 
-    <div class="panel">
-        <h2>リアルタイム加速度</h2>
-
-        <div class="values">
-            <div class="value">
-                <div class="small">X AXIS</div>
-                <div id="xValue" class="number axis-x">--</div>
-                <div class="small">m/s²</div>
-            </div>
-
-            <div class="value">
-                <div class="small">Y AXIS</div>
-                <div id="yValue" class="number axis-y">--</div>
-                <div class="small">m/s²</div>
-            </div>
-
-            <div class="value">
-                <div class="small">Z AXIS</div>
-                <div id="zValue" class="number axis-z">--</div>
-                <div class="small">m/s²</div>
-            </div>
-        </div>
-    </div>
-
-    <div class="panel">
-        <h2>加速度の大きさ</h2>
-        <div id="magnitude" class="magnitude">-- m/s²</div>
-        <div class="small" style="text-align:center">
-            静止時はおおむね9.8 m/s²になります
-        </div>
-    </div>
-
-    <div class="panel">
-        <h2>3D傾きビュー</h2>
-        <div class="cube-area">
-            <div class="cube" id="cube">
-                <div class="face front">FRONT</div>
-                <div class="face back">BACK</div>
-                <div class="face right">RIGHT</div>
-                <div class="face left">LEFT</div>
-                <div class="face top">TOP</div>
-                <div class="face bottom">BOTTOM</div>
-            </div>
-        </div>
-        <div class="small" style="text-align:center">
-            Arduinoを傾けてみてください
-        </div>
-    </div>
-
-    <div class="panel">
-        <h2>加速度の履歴</h2>
-        <canvas id="graph"></canvas>
-        <div class="small">
-            <span class="axis-x">● X</span>　
-            <span class="axis-y">● Y</span>　
-            <span class="axis-z">● Z</span>
-        </div>
-    </div>
-
-    <script>
-        const SERVICE_UUID = "19b10000-e8f2-537e-4f6c-d104768a1214";
-        const CHARACTERISTIC_UUID = "19b10001-e8f2-537e-4f6c-d104768a1214";
-
-        let device;
-        let characteristic;
-
-        let accel = { x: 0, y: 0, z: 0 };
-
-        const history = {
-            x: [],
-            y: [],
-            z: []
-        };
-
-        const MAX_POINTS = 100;
-
-        const statusElement = document.getElementById("status");
-        const decoder = new TextDecoder("utf-8");
-
-        document.getElementById("connectButton").addEventListener("click", connect);
-
-        async function connect() {
-            try {
-                statusElement.textContent = "デバイスを検索しています...";
-
-                device = await navigator.bluetooth.requestDevice({
-                    filters: [{ services: [SERVICE_UUID] }]
-                });
-
-                device.addEventListener("gattserverdisconnected", () => {
-                    statusElement.textContent = "接続が切断されました";
-                });
-
-                const server = await device.gatt.connect();
-                const service = await server.getPrimaryService(SERVICE_UUID);
-
-                characteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
-
-                await characteristic.startNotifications();
-
-                characteristic.addEventListener(
-                    "characteristicvaluechanged",
-                    receiveData
-                );
-
-                statusElement.textContent = "接続成功！センサーを動かしてみてください";
-                statusElement.style.color = "#48d597";
-
-            } catch (error) {
-                statusElement.textContent = "接続エラー: " + error.message;
-                console.error(error);
-            }
-        }
-
-        function receiveData(event) {
-            const raw = decoder.decode(event.target.value).trim();
-
-            // Arduinoから届いた「X,Y,Z」を読み取る
-            const values = raw.split(",").map(Number);
-
-            if (values.length < 3 || !values.slice(0, 3).every(Number.isFinite)) {
-                console.log("読み取れないデータ:", raw);
-                return;
-            }
-
-            accel.x = values[0];
-            accel.y = values[1];
-            accel.z = values[2];
-
-            updateDisplay();
-            updateCube();
-            updateGraph();
-        }
-
-        function updateDisplay() {
-            document.getElementById("xValue").textContent = accel.x.toFixed(2);
-            document.getElementById("yValue").textContent = accel.y.toFixed(2);
-            document.getElementById("zValue").textContent = accel.z.toFixed(2);
-
-            const magnitude = Math.sqrt(
-                accel.x ** 2 + accel.y ** 2 + accel.z ** 2
-            );
-
-            document.getElementById("magnitude").textContent =
-                magnitude.toFixed(2) + " m/s²";
-        }
-
-        function updateCube() {
-            // 重力方向から傾きを概算する
-            const roll = Math.atan2(accel.y, accel.z) * 180 / Math.PI;
-
-            const pitch = Math.atan2(
-                -accel.x,
-                Math.sqrt(accel.y ** 2 + accel.z ** 2)
-            ) * 180 / Math.PI;
-
-            document.getElementById("cube").style.transform =
-                `rotateX(${pitch}deg) rotateY(0deg) rotateZ(${-roll}deg)`;
-        }
-
-        function updateGraph() {
-            history.x.push(accel.x);
-            history.y.push(accel.y);
-            history.z.push(accel.z);
-
-            for (const axis of ["x", "y", "z"]) {
-                if (history[axis].length > MAX_POINTS) {
-                    history[axis].shift();
-                }
-            }
-
-            drawGraph();
-        }
-
-        function drawGraph() {
-            const canvas = document.getElementById("graph");
-            const ctx = canvas.getContext("2d");
-
-            const width = canvas.clientWidth;
-            const height = canvas.clientHeight;
-            const dpr = window.devicePixelRatio || 1;
-
-            canvas.width = width * dpr;
-            canvas.height = height * dpr;
-            ctx.scale(dpr, dpr);
-
-            ctx.clearRect(0, 0, width, height);
-
-            const centerY = height / 2;
-            const scale = height / 24;
-
-            // グリッド
-            ctx.strokeStyle = "#34415a";
-            ctx.lineWidth = 1;
-
-            for (let i = 0; i <= 4; i++) {
-                const y = i * height / 4;
-                ctx.beginPath();
-                ctx.moveTo(0, y);
-                ctx.lineTo(width, y);
-                ctx.stroke();
-            }
-
-            const axes = [
-                { key: "x", color: "#58a6ff" },
-                { key: "y", color: "#48d597" },
-                { key: "z", color: "#ffad60" }
-            ];
-
-            axes.forEach(axis => {
-                const data = history[axis.key];
-
-                if (data.length < 2) return;
-
-                ctx.beginPath();
-                ctx.strokeStyle = axis.color;
-                ctx.lineWidth = 2;
-
-                data.forEach((value, index) => {
-                    const x = index / (MAX_POINTS - 1) * width;
-                    const y = centerY - value * scale;
-
-                    if (index === 0) {
-                        ctx.moveTo(x, y);
-                    } else {
-                        ctx.lineTo(x, y);
-                    }
-                });
-
-                ctx.stroke();
-            });
-        }
-
-        window.addEventListener("resize", drawGraph);
-        drawGraph();
+    <script type="module" src="./main.js">
     </script>
 
 </body>
