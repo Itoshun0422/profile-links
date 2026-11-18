@@ -1,20 +1,66 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta
+name="viewport"
+content="width=device-width, initial-scale=1.0">
+
+<title>IMU Trail</title>
+
+<link rel="stylesheet" href="./style.css">
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"
+  }
+}
+</script>
+
+<style>
+
+body{
+    margin:0;
+    overflow:hidden;
+    background:#101820;
+}
+
+#info{
+    position:absolute;
+    top:20px;
+    left:20px;
+    color:white;
+    z-index:100;
+    font-family:sans-serif;
+}
+
+</style>
+
+</head>
+
 <body>
 
-    <div id="info">
+<div id="info">
 
-        IMU Trail Test
+    IMU Trail Test
 
-    </div>
+</div>
 
-    <button id="connectBtn">
+<button id="connectBtn">
 
-        BLE接続
+    BLE接続
 
-    </button>
+</button>
 
-    <script
-        type="module"
-        src="./main.js">
-    </script>
+<script
+type="module"
+src="./main.js">
+</script>
 
 </body>
+
+</html>
