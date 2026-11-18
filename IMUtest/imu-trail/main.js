@@ -1,7 +1,7 @@
 import * as THREE from "three";
 
 import { OrbitControls }
-from "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/controls/OrbitControls.js";
+    from "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/controls/OrbitControls.js";
 
 
 // ==========================================
@@ -13,42 +13,39 @@ let currentY = 0;
 let currentZ = 0;
 
 const SERVICE_UUID =
-"12345678-1234-1234-1234-123456789abc";
+    "12345678-1234-1234-1234-123456789abc";
 
 const CHARACTERISTIC_UUID =
-"abcdefab-1234-1234-1234-abcdefabcdef";
+    "abcdefab-1234-1234-1234-abcdefabcdef";
 
-async function connectBLE(){
+async function connectBLE() {
 
-    try{
+    try {
 
         const device =
-        await navigator.bluetooth.requestDevice({
+            await navigator.bluetooth
+                .requestDevice({
 
-            filters:[
-                {
-                    name:"IMUTracker"
-                }
-            ],
+                    acceptAllDevices: true,
 
-            optionalServices:[
-                SERVICE_UUID
-            ]
+                    optionalServices: [
+                        SERVICE_UUID
+                    ]
 
-        });
+                });
 
         const server =
-        await device.gatt.connect();
+            await device.gatt.connect();
 
         const service =
-        await server.getPrimaryService(
-            SERVICE_UUID
-        );
+            await server.getPrimaryService(
+                SERVICE_UUID
+            );
 
         const characteristic =
-        await service.getCharacteristic(
-            CHARACTERISTIC_UUID
-        );
+            await service.getCharacteristic(
+                CHARACTERISTIC_UUID
+            );
 
         await characteristic.startNotifications();
 
@@ -59,9 +56,9 @@ async function connectBLE(){
             event => {
 
                 const value =
-                new TextDecoder().decode(
-                    event.target.value
-                );
+                    new TextDecoder().decode(
+                        event.target.value
+                    );
 
                 console.log(
                     "RX:",
@@ -69,18 +66,18 @@ async function connectBLE(){
                 );
 
                 const parts =
-                value.split(",");
+                    value.split(",");
 
-                if(parts.length >= 3){
+                if (parts.length >= 3) {
 
                     currentX =
-                    parseFloat(parts[0]);
+                        parseFloat(parts[0]);
 
                     currentY =
-                    parseFloat(parts[1]);
+                        parseFloat(parts[1]);
 
                     currentZ =
-                    parseFloat(parts[2]);
+                        parseFloat(parts[2]);
 
                 }
 
@@ -94,7 +91,7 @@ async function connectBLE(){
 
     }
 
-    catch(error){
+    catch (error) {
 
         console.error(
             error
@@ -110,11 +107,11 @@ async function connectBLE(){
 // ==========================================
 
 const button =
-document.getElementById(
-    "connectBtn"
-);
+    document.getElementById(
+        "connectBtn"
+    );
 
-if(button){
+if (button) {
 
     button.addEventListener(
 
@@ -132,12 +129,12 @@ if(button){
 // ==========================================
 
 const scene =
-new THREE.Scene();
+    new THREE.Scene();
 
 scene.background =
-new THREE.Color(
-    0x101820
-);
+    new THREE.Color(
+        0x101820
+    );
 
 
 // ==========================================
@@ -145,18 +142,18 @@ new THREE.Color(
 // ==========================================
 
 const camera =
-new THREE.PerspectiveCamera(
+    new THREE.PerspectiveCamera(
 
-    75,
+        75,
 
-    window.innerWidth /
-    window.innerHeight,
+        window.innerWidth /
+        window.innerHeight,
 
-    0.1,
+        0.1,
 
-    1000
+        1000
 
-);
+    );
 
 camera.position.set(
     20,
@@ -170,11 +167,11 @@ camera.position.set(
 // ==========================================
 
 const renderer =
-new THREE.WebGLRenderer({
+    new THREE.WebGLRenderer({
 
-    antialias:true
+        antialias: true
 
-});
+    });
 
 renderer.setSize(
 
@@ -194,16 +191,16 @@ document.body.appendChild(
 // ==========================================
 
 const controls =
-new OrbitControls(
+    new OrbitControls(
 
-    camera,
+        camera,
 
-    renderer.domElement
+        renderer.domElement
 
-);
+    );
 
 controls.enableDamping =
-true;
+    true;
 
 
 // ==========================================
@@ -228,16 +225,16 @@ scene.add(
 // ==========================================
 
 const grid =
-new THREE.GridHelper(
+    new THREE.GridHelper(
 
-    100,
-    100,
+        100,
+        100,
 
-    0x69A0FF,
+        0x69A0FF,
 
-    0x305080
+        0x305080
 
-);
+    );
 
 scene.add(
     grid
@@ -258,53 +255,53 @@ scene.add(
 // ==========================================
 
 const marker =
-new THREE.Group();
+    new THREE.Group();
 
 const core =
-new THREE.Mesh(
+    new THREE.Mesh(
 
-    new THREE.SphereGeometry(
+        new THREE.SphereGeometry(
 
-        0.25,
+            0.25,
 
-        32,
+            32,
 
-        32
+            32
 
-    ),
+        ),
 
-    new THREE.MeshBasicMaterial({
+        new THREE.MeshBasicMaterial({
 
-        color:0xffffff
+            color: 0xffffff
 
-    })
+        })
 
-);
+    );
 
 const glow =
-new THREE.Mesh(
+    new THREE.Mesh(
 
-    new THREE.SphereGeometry(
+        new THREE.SphereGeometry(
 
-        0.4,
+            0.4,
 
-        32,
+            32,
 
-        32
+            32
 
-    ),
+        ),
 
-    new THREE.MeshBasicMaterial({
+        new THREE.MeshBasicMaterial({
 
-        color:0x7DF9FF,
+            color: 0x7DF9FF,
 
-        transparent:true,
+            transparent: true,
 
-        opacity:0.35
+            opacity: 0.35
 
-    })
+        })
 
-);
+    );
 
 marker.add(glow);
 marker.add(core);
@@ -321,14 +318,14 @@ const trailPoints = [];
 let trailLine = null;
 
 const TRAIL_DURATION =
-10000;
+    10000;
 
 
 // ==========================================
 // Animate
 // ==========================================
 
-function animate(){
+function animate() {
 
     requestAnimationFrame(
         animate
@@ -347,44 +344,44 @@ function animate(){
     trailPoints.push({
 
         position:
-        new THREE.Vector3(
+            new THREE.Vector3(
 
-            currentX,
+                currentX,
 
-            currentY,
+                currentY,
 
-            currentZ
+                currentZ
 
-        ),
+            ),
 
         timestamp:
-        Date.now()
+            Date.now()
 
     });
 
     const now =
-    Date.now();
+        Date.now();
 
-    while(
+    while (
 
         trailPoints.length > 0 &&
 
         now -
 
         trailPoints[0]
-        .timestamp >
+            .timestamp >
 
         TRAIL_DURATION
 
-    ){
+    ) {
 
         trailPoints.shift();
 
     }
 
-    if(
+    if (
         trailLine
-    ){
+    ) {
 
         scene.remove(
             trailLine
@@ -393,31 +390,31 @@ function animate(){
     }
 
     const positions =
-    trailPoints.map(
+        trailPoints.map(
 
-        p => p.position
+            p => p.position
 
-    );
+        );
 
     const geometry =
-    new THREE.BufferGeometry()
+        new THREE.BufferGeometry()
 
-    .setFromPoints(
-        positions
-    );
+            .setFromPoints(
+                positions
+            );
 
     trailLine =
-    new THREE.Line(
+        new THREE.Line(
 
-        geometry,
+            geometry,
 
-        new THREE.LineBasicMaterial({
+            new THREE.LineBasicMaterial({
 
-            color:0x7DF9FF
+                color: 0x7DF9FF
 
-        })
+            })
 
-    );
+        );
 
     scene.add(
         trailLine
@@ -446,13 +443,13 @@ window.addEventListener(
 
     "resize",
 
-    ()=>{
+    () => {
 
         camera.aspect =
 
-        window.innerWidth /
+            window.innerWidth /
 
-        window.innerHeight;
+            window.innerHeight;
 
         camera.updateProjectionMatrix();
 
