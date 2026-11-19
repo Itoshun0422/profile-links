@@ -73,16 +73,14 @@ async function connectBLE() {
                 const parts =
                     value.split(",");
 
-                if (parts.length >= 3) {
+                if (parts.length >= 4) {
 
-                    currentX =
-                        parseFloat(parts[0]);
+                    currentX = parseFloat(parts[0]);
+                    currentY = parseFloat(parts[1]);
+                    currentZ = parseFloat(parts[2]);
 
-                    currentY =
-                        parseFloat(parts[1]);
-
-                    currentZ =
-                        parseFloat(parts[2]);
+                    currentHeading =
+                        parseFloat(parts[3]);
 
                 }
 
@@ -262,57 +260,56 @@ scene.add(
 const marker =
     new THREE.Group();
 
-const core =
-    new THREE.Mesh(
-
-        new THREE.SphereGeometry(
-
-            0.25,
-
-            32,
-
-            32
-
-        ),
-
-        new THREE.MeshBasicMaterial({
-
-            color: 0xffffff
-
-        })
-
-    );
-
 const glow =
     new THREE.Mesh(
-
         new THREE.SphereGeometry(
-
-            0.4,
-
-            32,
-
-            32
-
+            0.40,
+            24,
+            24
         ),
-
         new THREE.MeshBasicMaterial({
-
             color: 0x7DF9FF,
-
             transparent: true,
-
-            opacity: 0.35
-
+            opacity: 0.30
         })
-
     );
+
+const core =
+    new THREE.Mesh(
+        new THREE.SphereGeometry(
+            0.25,
+            24,
+            24
+        ),
+        new THREE.MeshBasicMaterial({
+            color: 0xffffff
+        })
+    );
+
+const arrow =
+    new THREE.Mesh(
+        new THREE.ConeGeometry(
+            0.18,
+            0.8,
+            20
+        ),
+        new THREE.MeshBasicMaterial({
+            color: 0xff4040
+        })
+    );
+
+// +X方向を向く
+arrow.rotation.z =
+    -Math.PI / 2;
+
+arrow.position.x =
+    0.75;
 
 marker.add(glow);
 marker.add(core);
+marker.add(arrow);
 
 scene.add(marker);
-
 
 // ==========================================
 // Trail
@@ -345,6 +342,12 @@ function animate() {
         currentZ
 
     );
+    
+
+    marker.rotation.y =
+        THREE.MathUtils.degToRad(
+            -currentHeading
+        );
 
     trailPoints.push({
 
