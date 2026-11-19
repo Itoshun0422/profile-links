@@ -23,20 +23,21 @@ async function connectBLE() {
     try {
 
         const device =
-            await navigator.bluetooth
-                .requestDevice({
+            await navigator.bluetooth.requestDevice({
 
-                    filters: [
-                        {
-                            name: "IMUTracker"
-                        }
-                    ],
+                filters: [
+                    {
+                        services: [
+                            SERVICE_UUID
+                        ]
+                    }
+                ],
 
-                    optionalServices: [
-                        SERVICE_UUID
-                    ]
+                optionalServices: [
+                    SERVICE_UUID
+                ]
 
-                });
+            });
 
         const server =
             await device.gatt.connect();
