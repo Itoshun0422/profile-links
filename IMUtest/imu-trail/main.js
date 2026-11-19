@@ -26,7 +26,11 @@ async function connectBLE() {
             await navigator.bluetooth
                 .requestDevice({
 
-                    acceptAllDevices: true,
+                    filters: [
+                        {
+                            name: "IMUTracker"
+                        }
+                    ],
 
                     optionalServices: [
                         SERVICE_UUID
