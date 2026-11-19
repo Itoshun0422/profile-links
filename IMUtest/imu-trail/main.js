@@ -1,7 +1,7 @@
 import * as THREE from "three";
 
 import { OrbitControls }
-    from "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/controls/OrbitControls.js";
+from "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/controls/OrbitControls.js";
 
 
 // ==========================================
@@ -11,6 +11,7 @@ import { OrbitControls }
 let currentX = 0;
 let currentY = 0;
 let currentZ = 0;
+let currentHeading = 0;
 
 const SERVICE_UUID =
     "12345678-1234-1234-1234-123456789abc";
@@ -24,7 +25,6 @@ async function connectBLE() {
 
         const device =
             await navigator.bluetooth.requestDevice({
-
                 filters: [
                     {
                         services: [
@@ -32,12 +32,15 @@ async function connectBLE() {
                         ]
                     }
                 ],
-
                 optionalServices: [
                     SERVICE_UUID
                 ]
-
             });
+
+        console.log(
+            "Device:",
+            device.name
+        );
 
         const server =
             await device.gatt.connect();
@@ -55,15 +58,14 @@ async function connectBLE() {
         await characteristic.startNotifications();
 
         characteristic.addEventListener(
-
             "characteristicvaluechanged",
-
             event => {
 
                 const value =
-                    new TextDecoder().decode(
-                        event.target.value
-                    );
+                    new TextDecoder()
+                        .decode(
+                            event.target.value
+                        );
 
                 console.log(
                     "RX:",
@@ -75,17 +77,19 @@ async function connectBLE() {
 
                 if (parts.length >= 4) {
 
-                    currentX = parseFloat(parts[0]);
-                    currentY = parseFloat(parts[1]);
-                    currentZ = parseFloat(parts[2]);
+                    currentX =
+                        parseFloat(parts[0]);
+
+                    currentY =
+                        parseFloat(parts[1]);
+
+                    currentZ =
+                        parseFloat(parts[2]);
 
                     currentHeading =
                         parseFloat(parts[3]);
-
                 }
-
             }
-
         );
 
         console.log(
@@ -96,12 +100,8 @@ async function connectBLE() {
 
     catch (error) {
 
-        console.error(
-            error
-        );
-
+        console.error(error);
     }
-
 }
 
 
@@ -117,13 +117,9 @@ const button =
 if (button) {
 
     button.addEventListener(
-
         "click",
-
         connectBLE
-
     );
-
 }
 
 
@@ -146,16 +142,11 @@ scene.background =
 
 const camera =
     new THREE.PerspectiveCamera(
-
         75,
-
         window.innerWidth /
         window.innerHeight,
-
         0.1,
-
         1000
-
     );
 
 camera.position.set(
@@ -171,17 +162,12 @@ camera.position.set(
 
 const renderer =
     new THREE.WebGLRenderer({
-
         antialias: true
-
     });
 
 renderer.setSize(
-
     window.innerWidth,
-
     window.innerHeight
-
 );
 
 document.body.appendChild(
@@ -195,11 +181,8 @@ document.body.appendChild(
 
 const controls =
     new OrbitControls(
-
         camera,
-
         renderer.domElement
-
     );
 
 controls.enableDamping =
@@ -211,15 +194,10 @@ controls.enableDamping =
 // ==========================================
 
 scene.add(
-
     new THREE.AmbientLight(
-
         0xffffff,
-
         3
-
     )
-
 );
 
 
@@ -229,19 +207,13 @@ scene.add(
 
 const grid =
     new THREE.GridHelper(
-
         100,
         100,
-
         0x69A0FF,
-
         0x305080
-
     );
 
-scene.add(
-    grid
-);
+scene.add(grid);
 
 
 // ==========================================
@@ -249,7 +221,9 @@ scene.add(
 // ==========================================
 
 scene.add(
-    new THREE.AxesHelper(5)
+    new THREE.AxesHelper(
+        5
+    )
 );
 
 
@@ -298,7 +272,6 @@ const arrow =
         })
     );
 
-// +X方向を向く
 arrow.rotation.z =
     -Math.PI / 2;
 
@@ -311,16 +284,22 @@ marker.add(arrow);
 
 scene.add(marker);
 
+
 // ==========================================
 // Trail
 // ==========================================
 
 const trailPoints = [];
 
-let trailLine = null;
+let trailLine =
+    null;
 
 const TRAIL_DURATION =
-    100;
+    1000;
+
+let lastX = null;
+let lastY = null;
+let lastZ = null;
 
 
 // ==========================================
@@ -334,110 +313,94 @@ function animate() {
     );
 
     marker.position.set(
-
         currentX,
-
         currentY,
-
         currentZ
-
     );
-    
 
     marker.rotation.y =
         THREE.MathUtils.degToRad(
-            -currentHeading
+            -currentHeading + 90
         );
 
-    trailPoints.push({
+    if (
+        currentX !== lastX ||
+        currentY !== lastY ||
+        currentZ !== lastZ
+    ) {
 
-        position:
-            new THREE.Vector3(
+        trailPoints.push({
+            position:
+                new THREE.Vector3(
+                    currentX,
+                    currentY,
+                    currentZ
+                ),
+            timestamp:
+                Date.now()
+        });
 
-                currentX,
-
-                currentY,
-
-                currentZ
-
-            ),
-
-        timestamp:
-            Date.now()
-
-    });
+        lastX = currentX;
+        lastY = currentY;
+        lastZ = currentZ;
+    }
 
     const now =
         Date.now();
 
     while (
-
         trailPoints.length > 0 &&
-
         now -
-
-        trailPoints[0]
-            .timestamp >
-
+        trailPoints[0].timestamp >
         TRAIL_DURATION
-
     ) {
 
         trailPoints.shift();
-
     }
 
-    if (
-        trailLine
-    ) {
+    if (trailLine) {
 
         scene.remove(
             trailLine
         );
 
+        trailLine.geometry.dispose();
     }
 
-    const positions =
-        trailPoints.map(
+    if (
+        trailPoints.length >= 2
+    ) {
 
-            p => p.position
-
-        );
-
-    const geometry =
-        new THREE.BufferGeometry()
-
-            .setFromPoints(
-                positions
+        const positions =
+            trailPoints.map(
+                p => p.position
             );
 
-    trailLine =
-        new THREE.Line(
+        const geometry =
+            new THREE.BufferGeometry()
+                .setFromPoints(
+                    positions
+                );
 
-            geometry,
+        trailLine =
+            new THREE.Line(
+                geometry,
+                new THREE.LineBasicMaterial({
+                    color: 0x7DF9FF
+                })
+            );
 
-            new THREE.LineBasicMaterial({
-
-                color: 0x7DF9FF
-
-            })
-
+        scene.add(
+            trailLine
         );
-
-    scene.add(
-        trailLine
-    );
+    }
 
     controls.update();
 
     renderer.render(
-
         scene,
-
         camera
-
     );
-
 }
 
 animate();
@@ -448,27 +411,18 @@ animate();
 // ==========================================
 
 window.addEventListener(
-
     "resize",
-
     () => {
 
         camera.aspect =
-
             window.innerWidth /
-
             window.innerHeight;
 
         camera.updateProjectionMatrix();
 
         renderer.setSize(
-
             window.innerWidth,
-
             window.innerHeight
-
         );
-
     }
-
 );
