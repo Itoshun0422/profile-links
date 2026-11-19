@@ -323,7 +323,7 @@ const trailPoints = [];
 let trailLine = null;
 
 const TRAIL_DURATION =
-    1000;
+    100;
 
 
 // ==========================================
